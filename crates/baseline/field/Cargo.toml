@@ -1,0 +1,16 @@
+[package]
+name = "field"
+version = "0.1.0"
+edition = "2021"
+
+# Facade over Plonky3's BabyBear + degree-4 binomial extension. Centralizes
+# the `p3-field` / `p3-baby-bear` version pin and provides the `BB`, `BB4`,
+# and `BB4UniformSampler` types that the field-side protocol crates
+# (`sumcheck-field`, `piop-field`) and cross-stack benches in `galois-ring`
+# all consume. Downstream crates should depend on this crate rather than on
+# `p3-*` directly.
+
+[dependencies]
+p3-field    = "=0.3.2-succinct"
+p3-baby-bear = "=0.3.2-succinct"
+rand = "0.8"

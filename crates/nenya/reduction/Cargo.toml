@@ -1,0 +1,23 @@
+[package]
+name = "reduction"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+galois-ring = { path = "../galois-ring" }
+rayon = "1.10"
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "reduce"
+harness = false
+
+[[bench]]
+name = "parallel"
+harness = false
+
+[[bench]]
+name = "mimd"
+harness = false

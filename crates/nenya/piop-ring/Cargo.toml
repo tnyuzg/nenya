@@ -1,0 +1,32 @@
+[package]
+name = "piop-ring"
+version = "0.1.0"
+edition = "2021"
+
+# Two PIOP sumcheck instances over GR(2^32, 128):
+#   - Multiplication check: ∑_h eq(r,h) · a(h) · b(h)        (deg-3)
+#   - Linear check:        ∑_h A(r,h) · w(h)                 (deg-2, A over u32)
+#
+# Each check has its own internal sumcheck loop specialized to that form.
+# No trait abstraction with `piop-field` — the ring side gets ring-specific
+# optimizations (mul_by_gr32_1 for u32-aware matvec, {s(0),s(1),s(∞)} round
+# message form to trade muls for adds, etc.) that wouldn't apply to a field
+# backend.
+
+[dependencies]
+galois-ring = { path = "../galois-ring" }
+sumcheck-ring = { path = "../../sumcheck-experiments/sumcheck-ring" }   # reference baseline, cross_check_sumcheck_ring test only
+reduction  = { path = "../reduction" }        # for R_2-sparse matrices in linear_check_{mimd,general}
+rand = "0.8"
+rayon = "1.10"                                     # layer-level threading in linear_check_general
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "piop"
+harness = false
+
+[[bench]]
+name = "linear_checks"
+harness = false

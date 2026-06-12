@@ -1,0 +1,55 @@
+[package]
+name = "snark-ring"
+version = "0.1.0"
+edition = "2021"
+
+# End-to-end zkSNARK over R_2 = GR(2^n, 128) for SIMD R1CS instances, generic
+# over the base-limb width. Wires together reduction (φ_2 reduction), piop-ring
+# (the OPTIMIZED Gruen mult-check + {0,1,∞} linear-check kernels), pcs-ring
+# (commitment to w_phi), and an in-crate generic-R_2 tensor PCS for the q1, q2
+# quotient witnesses. (sumcheck-ring is the unoptimized reference baseline and
+# is intentionally NOT a dependency — it lives only for benchmarking.)
+# See snark-ring.md for the protocol writeup.
+
+[dependencies]
+galois-ring   = { path = "../galois-ring" }
+piop-ring     = { path = "../piop-ring" }
+pcs-ring    = { path = "../pcs-ring" }
+reduction   = { path = "../reduction" }
+blake3 = "1.5"
+rayon = "1.10"                                    # parallel build_M_row; bench thread-pool
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+# For the cross-prover grid benchmark (`snark_grid`): the field baseline.
+snark-field = { path = "../../baseline/snark-field" }
+pcs-field = { path = "../../baseline/pcs-field" }
+field = { path = "../../baseline/field" }
+
+[[bench]]
+name = "snark_simd"
+harness = false
+
+[[bench]]
+name = "snark_simd_oneshot"
+harness = false
+
+[[bench]]
+name = "snark_general_oneshot"
+harness = false
+
+[[bench]]
+name = "snark_mimd_oneshot"
+harness = false
+
+[[bench]]
+name = "snark_grid"
+harness = false
+
+[[bench]]
+name = "fs_overhead"
+harness = false
+
+[[bench]]
+name = "secure_curve"
+harness = false

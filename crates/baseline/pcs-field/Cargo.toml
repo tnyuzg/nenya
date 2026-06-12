@@ -1,0 +1,27 @@
+[package]
+name = "pcs-field"
+version = "0.1.0"
+edition = "2021"
+
+# Field-side Brakedown tensor PCS over BabyBear — the apples-to-apples baseline
+# for `pcs-ring`. Same RAA fast-path code, same blake3 column-Merkle (reused
+# from `pcs-ring::merkle`, which is field-agnostic), same Fiat–Shamir; the only
+# deliberate difference is the element type (BB, 4 bytes / mod-p) vs the ring's
+# packed `[L; 32]`. Used by `snark-field`.
+
+[dependencies]
+field = { path = "../field" }
+pcs-ring = { path = "../../nenya/pcs-ring" }   # reuse the field-agnostic blake3 Merkle
+p3-field = "=0.3.2-succinct"          # PrimeField32::as_canonical_u32
+blake3 = "1.5"
+rand = "0.8"
+rayon = "1.10"                        # parallel encode rows + Merkle leaves
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+# Field-side tensor-PCS benchmark — the apples-to-apples baseline for
+# `pcs-ring`'s `pcs` bench. Lives here, alongside the field PCS it measures.
+[[bench]]
+name = "field_pcs"
+harness = false

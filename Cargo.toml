@@ -1,0 +1,18 @@
+[workspace]
+members = [
+    # nenya/ — the Galois-ring SNARK stack
+    "crates/nenya/galois-ring",
+    "crates/nenya/reduction",
+    "crates/nenya/piop-ring",
+    "crates/nenya/pcs-ring",
+    "crates/nenya/snark-ring",
+    # baseline/ — the field SNARK stack (performance comparison baseline)
+    "crates/baseline/field",
+    "crates/baseline/piop-field",
+    "crates/baseline/pcs-field",
+    "crates/baseline/snark-field",
+    # sumcheck-experiments/ — unoptimized reference sumchecks (cross-check baselines, not on any prover path)
+    "crates/sumcheck-experiments/sumcheck-ring",
+    "crates/sumcheck-experiments/sumcheck-field",
+]
+resolver = "2"
