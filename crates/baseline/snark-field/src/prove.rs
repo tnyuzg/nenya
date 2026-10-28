@@ -127,7 +127,8 @@ pub fn prove_field_with_timing(
     // ----- 5. Mult-check sumcheck (deg-3). Per-round Fiat–Shamir. -----
     t = std::time::Instant::now();
     transcript.absorb_label(b"mult_check_sumcheck");
-    let (mult_proof, s_1) = prove_mult_check(&a_mle, &b_mle, &r_target, claim_mult, &mut transcript);
+    let (mult_proof, s_1) =
+        prove_mult_check(&a_mle, &b_mle, &r_target, claim_mult, &mut transcript);
     timing.mult_sumcheck_ms = t.elapsed().as_secs_f64() * 1e3;
     debug_assert_eq!(s_1.len(), log_n);
     absorb_mult_finals(&mut transcript, &mult_proof);

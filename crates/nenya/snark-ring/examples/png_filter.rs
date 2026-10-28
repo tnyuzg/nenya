@@ -38,8 +38,8 @@
 //!   is a conservative, field-favourable count.
 //!
 //! Both prove the identical batch of images; we hold the **image data fixed** and
-//! compare prover time. PCS queries `ell = 16` on both sides (same methodology as
-//! `BENCHMARKS.md`; at equal `ell` the field is actually *under*-secured).
+//! compare prover time. Both use the paper's secure parameters (δ = 0.19,
+//! λ = 100, t = 1060 queried columns).
 //!
 //! Run:  `cargo run --release --example png_filter -- [log_bytes] [nthreads]`
 //!   `log_bytes` = log₂(total raw bytes in the batch), default 18 (256 KiB).
@@ -229,12 +229,7 @@ fn build_field(
             }
         }
     }
-    FieldR1csInstance {
-        a,
-        b: bmat,
-        c,
-        w,
-    }
+    FieldR1csInstance { a, b: bmat, c, w }
 }
 
 #[derive(Clone, Copy, Default)]
@@ -250,13 +245,14 @@ fn main() {
         .nth(1)
         .and_then(|s| s.parse().ok())
         .unwrap_or(18);
-    let nthreads: usize = std::env::args().nth(2).and_then(|s| s.parse().ok()).unwrap_or_else(
-        || {
+    let nthreads: usize = std::env::args()
+        .nth(2)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or_else(|| {
             std::thread::available_parallelism()
                 .map(|x| x.get())
                 .unwrap_or(1)
-        },
-    );
+        });
     assert!(
         log_bytes >= 10,
         "log_bytes too small; use >= 10 (32 images need room)"
@@ -269,8 +265,7 @@ fn main() {
     let preds = predecessors(h, wd);
 
     // Shared batch of 32 images (same data fed to both provers).
-    let images: Vec<(Vec<u8>, Vec<u8>)> =
-        (0..SLOTS).map(|s| gen_image(s, b, &preds)).collect();
+    let images: Vec<(Vec<u8>, Vec<u8>)> = (0..SLOTS).map(|s| gen_image(s, b, &preds)).collect();
 
     // ----- dimensions -----
     // ring: n = b rows (one per byte), m = pad(1 + 2b) witness, 32 slots.
@@ -292,7 +287,7 @@ fn main() {
 
     // ----- ring-u8 SIMD prover -----
     // Secure operating point (δ=0.19, λ=100 ⇒ t=1060, proof-size-optimal shape),
-    // same as the rest of the Section-5 evaluation. Prover time is ~t-robust, so
+    // same as the rest of the evaluation (paper Section 6). Prover time is ~t-robust, so
     // the heavier query budget only inflates proof size (not reported by Exp 3).
     let ring_params = SimdSnarkParams::<u8>::secure(log_n_ring, log_m_ring, 0xDEAD, 0xCAFE);
     let (ring_proof, rt) = pool.install(|| prove_simd_with_timing(&ring, &ring_params));
@@ -311,8 +306,9 @@ fn main() {
             + rt.open_e_ms,
         total: rt.total_ms,
     };
-    let ring_ok =
-        pool.install(|| verify_simd(&ring.a, &ring.b, &ring.c, &ring_params, &ring_proof)).is_ok();
+    let ring_ok = pool
+        .install(|| verify_simd(&ring.a, &ring.b, &ring.c, &ring_params, &ring_proof))
+        .is_ok();
 
     // ----- field prover -----
     let field_params = FieldSnarkParams::secure(log_n_field, log_m_field, 0xDEAD);
@@ -327,8 +323,9 @@ fn main() {
         pcs: ft.commit_w_ms + ft.open_w_ms,
         total: ft.total_ms,
     };
-    let field_ok =
-        pool.install(|| verify_field(&fld.a, &fld.b, &fld.c, &field_params, &field_proof)).is_ok();
+    let field_ok = pool
+        .install(|| verify_field(&fld.a, &fld.b, &fld.c, &field_params, &field_proof))
+        .is_ok();
 
     // ----------------------------- report -----------------------------
     println!(
@@ -356,10 +353,7 @@ fn main() {
     );
 
     println!("  prove time (ms):");
-    println!(
-        "    {:<10} {:>12} {:>12}",
-        "stage", "ring-u8", "field"
-    );
+    println!("    {:<10} {:>12} {:>12}", "stage", "ring-u8", "field");
     let row = |name: &str, r: f64, f: f64| {
         println!("    {name:<10} {r:>12.1} {f:>12.1}");
     };
@@ -381,7 +375,7 @@ fn main() {
         "\n  note: secure operating point — t=1060 queries on both (δ=0.19, λ=100). Field\n  \
          range-checks only the private raw bytes."
     );
-    // Machine-parseable line for the app_filter.dat driver (logsize = log_bytes).
+    // Machine-parseable result line: log_bytes, Nenya prover s, field prover s.
     println!(
         "APP_RESULT {log_bytes} {:.6} {:.6}",
         ring_cost.total / 1e3,

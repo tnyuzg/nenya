@@ -36,7 +36,9 @@ fn build_simd<L: Limb>(log_size: usize) -> SimdR1csInstance<L> {
         let mut w = vec![Gr1::<L>::ZERO; m];
         w[0] = Gr1::<L>::ONE;
         for i in 0..k {
-            let x = Gr1(L::from_u64((((kk * 0x9E37) ^ (i * 0x85EB)) as u64).wrapping_add(1)));
+            let x = Gr1(L::from_u64(
+                (((kk * 0x9E37) ^ (i * 0x85EB)) as u64).wrapping_add(1),
+            ));
             w[1 + 2 * i] = x;
             w[1 + 2 * i + 1] = x * x;
         }
@@ -217,3 +219,4 @@ macro_rules! width_tests {
 width_tests!(w8, u8);
 width_tests!(w16, u16);
 width_tests!(w32, u32);
+width_tests!(w64, u64);

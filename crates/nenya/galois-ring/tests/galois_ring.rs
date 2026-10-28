@@ -1,3 +1,6 @@
+// These tests check identities such as `a - a == 0` on purpose.
+#![allow(clippy::eq_op)]
+
 use galois_ring::teichmuller::compute_t1;
 use galois_ring::{GR32_1, GR32_128, GR32_4, T1};
 
@@ -180,7 +183,10 @@ fn check_inv_2adic<L: Limb>() {
             L::BITS
         );
         // Inverse is symmetric: inv is itself a unit and inverts back to `a`.
-        assert!(inv.is_odd(), "inv of a unit must be a unit (seed=0x{seed:016x})");
+        assert!(
+            inv.is_odd(),
+            "inv of a unit must be a unit (seed=0x{seed:016x})"
+        );
     }
     // Exhaustive sweep of every odd element for the narrow widths, where it is
     // cheap (256 / 65536 values). This pins the full inverse table at u8/u16.

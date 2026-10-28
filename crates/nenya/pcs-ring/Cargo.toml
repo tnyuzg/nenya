@@ -2,21 +2,15 @@
 name = "pcs-ring"
 version = "0.1.0"
 edition = "2021"
+license = "MIT OR Apache-2.0"
 
-# Brakedown-style tensor PCS over GR(2^32, 128) using an RAA code.
-# See PROTOCOL.md for the design writeup.
+# Brakedown-style polynomial commitment over GR(2^k, 128) using an RAA code,
+# generic over the base word (paper Section 5).
 
 [dependencies]
-galois-ring = { path = "../galois-ring" }       # GR32_*
-piop-ring = { path = "../piop-ring" }            # build_eq_table
-reduction = { path = "../reduction" }        # pack_r2 (for basis images v_k)
+galois-ring = { path = "../galois-ring" }
+piop-ring = { path = "../piop-ring" }
+reduction = { path = "../reduction" }
 blake3 = "1.5"
 rand = "0.8"
-rayon = "1.10"                                   # parallel encode rows + Merkle leaves/levels
-
-[dev-dependencies]
-criterion = { version = "0.5", features = ["html_reports"] }
-
-[[bench]]
-name = "pcs"
-harness = false
+rayon = "1.10"

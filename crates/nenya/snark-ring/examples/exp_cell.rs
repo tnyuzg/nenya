@@ -1,23 +1,24 @@
-//! Single-cell experiment runner for the Section-5 evaluation. One invocation =
-//! ONE measurement (so an external `timeout` gives the per-run 10-min cap, and
-//! the bash driver handles N-median + the data files).
-//!
-//! Secure operating point everywhere (`*SnarkParams::secure` ⇒ δ=0.19, λ=100,
-//! t=1060, proof-size-optimal shape). `x·x = y` circuit.
+//! Experiment runner for the paper's evaluation (Section 6). Each invocation
+//! makes one measurement at the paper's secure parameters (δ = 0.19, λ = 100,
+//! t = 1060, proof-size-optimal shape) on the circuit `x·x = y`.
 //!
 //! Usage:
-//!   exp_cell cell <field|simd|mimd|general> <field|u8|u16|u32|u64> <logN> <threads>
-//!        -> prints  "prove_s proof_bytes verify_ms"   (one prove + one verify)
-//!        (batched modes use per-instance log = logN-5; field/general use logN/-5 per the model)
+//!   exp_cell cell <field|simd|mimd|general> <u8|u16|u32|u64> <logN> <threads>
+//!       -> "prove_s proof_bytes verify_ms"        (Figures 5 and 8, Table 2)
+//!   exp_cell breakdown <field|simd|mimd|general> <threads> [logN]
+//!       -> "metric component value" lines, u32    (Table 1; logN defaults to 25)
 //!   exp_cell ringops
-//!        -> prints rows "k add_ring_ns add_field_ns mult_ring_ns mult_field_ns" for k=8,16,32,64
+//!       -> "k add_ring_ns add_field_ns mult_ring_ns mult_field_ns" rows (Table 3)
+//!
+//! `logN` is log2 of the total number of constraints; the word size is ignored
+//! for `field`.
 
 use field::{AbstractField, BB, BB4};
 use galois_ring::{Gr1, Gr128, Gr4, Limb};
 use reduction::constants::HasPackingConstants;
 use reduction::{
-    matrix::{CsrMatrix, SparseMatrix},
-    pack_general_matrices, pack_mimd_matrices, GeneralR1csInstance, SimdR1csInstance,
+    matrix::SparseMatrix, pack_general_matrices, pack_mimd_matrices, GeneralR1csInstance,
+    SimdR1csInstance,
 };
 use snark_field::instance::{FieldR1csInstance, SparseMatrixBB};
 use snark_field::{
@@ -39,7 +40,9 @@ fn xy_witness<L: Limb>(m: usize, seed: usize) -> Vec<Gr1<L>> {
     let mut w = vec![Gr1::<L>::ZERO; m];
     w[0] = Gr1::<L>::ONE;
     for i in 0..k {
-        let x = Gr1(L::from_u64((((seed * 0x9E37) ^ (i * 0x85EB)) as u64).wrapping_add(1)));
+        let x = Gr1(L::from_u64(
+            (((seed * 0x9E37) ^ (i * 0x85EB)) as u64).wrapping_add(1),
+        ));
         w[1 + 2 * i] = x;
         w[2 + 2 * i] = x * x;
     }
@@ -234,8 +237,8 @@ fn ringops() {
 }
 
 // ---------------------------------------------------------------------------
-// Cost breakdown (Exp 2): per-system phase split @ a fixed size.
-// Emits "metric component value" lines; the driver assembles breakdown.csv.
+// Cost breakdown (Table 1): per-system phase split at a fixed size.
+// Emits "metric component value" lines.
 // ---------------------------------------------------------------------------
 
 fn fmt(v: f64) -> String {
@@ -278,7 +281,7 @@ fn emit_proof(piop_b: usize, total_b: usize) {
     println!("proof_kb pcs {:.3}", pcs_b as f64 / 1000.0);
     println!("proof_kb total {:.3}", total_b as f64 / 1000.0);
 }
-/// Verify split per EXPERIMENTS_SPEC Exp. 2: `piop_mxeval` = the verifier's
+/// Verify split: `piop_mxeval` = the verifier's
 /// matrix random evaluation (recomputing the `M = A+γB+γ²C` row at the random
 /// point), pulled OUT of `piop`; `piop` = the rest of the PIOP verify (the
 /// sumcheck checks + glue). First three components sum to `total`.
@@ -354,7 +357,11 @@ fn bd_mimd<L: HasPackingConstants>(log: usize) {
         proof.mult_proof.serialize().len() + proof.lin_proof.serialize().len(),
         proof.size_bytes(),
     );
-    emit_verify(vt.piop_ms - vt.row_recompute_ms, vt.row_recompute_ms, vt.pcs_ms);
+    emit_verify(
+        vt.piop_ms - vt.row_recompute_ms,
+        vt.row_recompute_ms,
+        vt.pcs_ms,
+    );
 }
 
 fn bd_general<L: HasPackingConstants>(log_blocks: usize) {
@@ -384,7 +391,11 @@ fn bd_general<L: HasPackingConstants>(log_blocks: usize) {
         proof.mult_proof.serialize().len() + proof.lin_proof.serialize().len(),
         proof.size_bytes(),
     );
-    emit_verify(vt.piop_ms - vt.row_recompute_ms, vt.row_recompute_ms, vt.pcs_ms);
+    emit_verify(
+        vt.piop_ms - vt.row_recompute_ms,
+        vt.row_recompute_ms,
+        vt.pcs_ms,
+    );
 }
 
 fn bd_field(log: usize) {
@@ -422,7 +433,7 @@ fn bd_field(log: usize) {
         t.linear_arow_ms,
     );
     emit_preprocess(0.0); // field uses sparse A,B,C directly — no packing
-    // piop bytes per FieldSnarkProof::size_bytes accounting (BB4 = 16 B).
+                          // piop bytes per FieldSnarkProof::size_bytes accounting (BB4 = 16 B).
     let e = 16usize;
     let piop_b = (3 * e + proof.mult_proof.round_polys.len() * 4 * e)
         + (3 * e + proof.lin_proof.round_polys.len() * 3 * e);
@@ -440,135 +451,6 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     match args.get(1).map(|s| s.as_str()) {
         Some("ringops") => ringops(),
-        Some("gendetail") => {
-            // Detailed general prover phase split @ given logN (u32).
-            let logn: usize = args[2].parse().unwrap();
-            let threads: usize = args[3].parse().unwrap();
-            let pool = rayon::ThreadPoolBuilder::new()
-                .num_threads(threads)
-                .build()
-                .unwrap();
-            let log_blocks = logn - 5;
-            pool.install(|| {
-                let n = 32usize << log_blocks;
-                let [a, b, c] = xy_matrices::<u32>(n, n);
-                let w = xy_witness::<u32>(n, 1);
-                let diag = pack_general_matrices(&a, &b, &c);
-                let params = GeneralSnarkParams::<u32>::secure(log_blocks, diag, 0xDEAD, 0xCAFE);
-                let g = GeneralR1csInstance { a, b, c, w };
-                let (_proof, t) = prove_general_with_timing(&g.w, &params);
-                let p = |name: &str, ms: f64| {
-                    println!("  {name:<22} {:7.2}s  ({:4.1}%)", ms / 1e3, 100.0 * ms / t.total_ms)
-                };
-                println!("general @2^{logn} prover phases:");
-                p("reduce (rho+quots)", t.reduce_ms);
-                p("matvec (32-layer)", t.matvec_ms);
-                p("mult_sumcheck", t.mult_sumcheck_ms);
-                p("linear TOTAL", t.linear_ms);
-                p("  - row build (32L)", t.linear_rowbuild_ms);
-                p("  - linear sumcheck", t.linear_sumcheck_ms);
-                p("commit (enc+merkle)", t.commit_ms);
-                p("opens (batched)", t.opens_ms);
-                println!("  {:<22} {:7.2}s", "TOTAL", t.total_ms / 1e3);
-            });
-        }
-        Some("lindetail") => {
-            // Finer linear-check split for general @ given logN (u32): the matrix
-            // random evaluation `M^ℓ = A + γB + γ²C` vs the sumcheck (prover) and
-            // the row eval (verifier). matrix-eval/eval are value-independent →
-            // measured exactly; the sumcheck is value-dependent → from the REAL prover.
-            let logn: usize = args[2].parse().unwrap();
-            let threads: usize = args[3].parse().unwrap();
-            let pool = rayon::ThreadPoolBuilder::new()
-                .num_threads(threads)
-                .build()
-                .unwrap();
-            let log_blocks = logn - 5;
-            pool.install(|| {
-                let n = 32usize << log_blocks;
-                let [a, b, c] = xy_matrices::<u32>(n, n);
-                let w = xy_witness::<u32>(n, 1);
-                let diag = pack_general_matrices(&a, &b, &c);
-                // Value-independent terms (matrix random evaluation, + verifier eval).
-                let d = snark_ring::measure_linear_decomp(&diag, log_blocks);
-                // Real prove/verify: value-dependent sumcheck + a rowbuild cross-check.
-                let params = GeneralSnarkParams::<u32>::secure(log_blocks, diag, 0xDEAD, 0xCAFE);
-                let g = GeneralR1csInstance { a, b, c, w };
-                let (proof, pt) = prove_general_with_timing(&g.w, &params);
-                let (_r, vt) = verify_general_with_timing(&params, &proof);
-
-                let prover = d.matrix_eval_ms + pt.linear_sumcheck_ms;
-                let verifier = d.matrix_eval_ms + d.eval_ms;
-                let row = |name: &str, ms: f64, base: f64| {
-                    println!("  {name:<28} {:8.3}s  ({:5.1}%)", ms / 1e3, 100.0 * ms / base)
-                };
-                println!("general @2^{logn} linear-check decomposition (u32, {threads} threads):");
-                println!(
-                    " matrix random evaluation (M^ℓ=A+γB+γ²C) = {:.3}s (warm)   real per-proof {:.3}s (cold, memory-bound)",
-                    d.matrix_eval_ms / 1e3,
-                    pt.linear_rowbuild_ms / 1e3
-                );
-                println!(" PROVER linear-check:");
-                row("  matrix random evaluation", d.matrix_eval_ms, prover);
-                row("  sumcheck (real)", pt.linear_sumcheck_ms, prover);
-                println!("   prover linear total = {:.3}s", prover / 1e3);
-                println!(" VERIFIER linear-check:");
-                row("  matrix random evaluation", d.matrix_eval_ms, verifier);
-                row("  row eval <eq_s2,M^ℓ>", d.eval_ms, verifier);
-                println!(
-                    "   verifier linear total = {:.3}s   (full verify {:.3}s)",
-                    verifier / 1e3,
-                    vt.total_ms / 1e3
-                );
-            });
-        }
-        Some("preprocess") => {
-            // Time the witness-independent circuit packing (currently excluded
-            // from prover time). u32, per-instance/block log = logN-5.
-            let system = &args[2];
-            let logn: usize = args[3].parse().unwrap();
-            let threads: usize = args[4].parse().unwrap();
-            let pool = rayon::ThreadPoolBuilder::new()
-                .num_threads(threads)
-                .build()
-                .unwrap();
-            let log = logn - 5;
-            let secs = pool.install(|| match system.as_str() {
-                "simd" => {
-                    // SIMD's matrix preprocessing currently counted INSIDE the
-                    // prover (matvec_abc_ms): the COO→CSR build of A,B,C.
-                    let n = 1usize << log;
-                    let [a, b, c] = xy_matrices::<u32>(n, n);
-                    let t = Instant::now();
-                    let xa = CsrMatrix::from_coo(&a);
-                    let xb = CsrMatrix::from_coo(&b);
-                    let xc = CsrMatrix::from_coo(&c);
-                    let s = t.elapsed().as_secs_f64();
-                    std::hint::black_box((xa, xb, xc));
-                    s
-                }
-                "mimd" => {
-                    let n = 1usize << log;
-                    let a: [SparseMatrix<Gr1<u32>>; 32] =
-                        std::array::from_fn(|_| xy_matrices::<u32>(n, n)[0].clone());
-                    let b: [SparseMatrix<Gr1<u32>>; 32] =
-                        std::array::from_fn(|_| xy_matrices::<u32>(n, n)[1].clone());
-                    let c: [SparseMatrix<Gr1<u32>>; 32] =
-                        std::array::from_fn(|_| xy_matrices::<u32>(n, n)[2].clone());
-                    let t = Instant::now();
-                    let _ = pack_mimd_matrices(&a, &b, &c);
-                    t.elapsed().as_secs_f64()
-                }
-                _ => {
-                    let n = 32usize << log;
-                    let [a, b, c] = xy_matrices::<u32>(n, n);
-                    let t = Instant::now();
-                    let _ = pack_general_matrices(&a, &b, &c);
-                    t.elapsed().as_secs_f64()
-                }
-            });
-            println!("{secs:.6}");
-        }
         Some("breakdown") => {
             // @ 2^25 (field log=25; batched per-instance/block log=20), u32.
             let system = &args[2];
@@ -607,7 +489,10 @@ fn main() {
             println!("{prove_s:.6} {bytes} {verify_ms:.4}");
         }
         _ => {
-            eprintln!("usage: exp_cell cell <system> <word> <logN> <threads> | exp_cell ringops");
+            eprintln!(
+                "usage: exp_cell cell <system> <word> <logN> <threads> \
+                 | exp_cell breakdown <system> <threads> [logN] | exp_cell ringops"
+            );
             std::process::exit(2);
         }
     }

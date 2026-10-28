@@ -180,7 +180,8 @@ fn general_negative_corrupted_final_rho() {
     let claim = general_linear_check_claim(&rows, &rhos);
 
     let mut prover_sampler = R2TeichmullerSampler::new(0xBEEFCAFE);
-    let (mut proof, _) = prove_linear_check_general(rows.clone(), rhos.clone(), claim, &mut prover_sampler);
+    let (mut proof, _) =
+        prove_linear_check_general(rows.clone(), rhos.clone(), claim, &mut prover_sampler);
 
     // Corrupt one final_rho.
     proof.final_rho[7] = proof.final_rho[7] + GR32_128::ONE;

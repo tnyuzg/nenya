@@ -11,8 +11,7 @@
 //!
 //! Testing and evaluation are merged into a single pass using
 //! `e_0 := eq(z^0, ·)` as both the proximity-test combiner and the
-//! evaluation combiner (Brakedown §4.4 / Blaze §6). See `pcs-ring.md`
-//! §2.3–2.4.
+//! evaluation combiner (Brakedown §4.4 / Blaze §6).
 
 use crate::merkle::{hash_column, hash_packed_column, verify_path, Hash, MerkleTree};
 use crate::raa::RaaParams;
@@ -27,14 +26,14 @@ use reduction::pack_r2;
 // PCS
 // ---------------------------------------------------------------------------
 
-/// `L` defaults to `u32` so this crate's tests/benches can write `Pcs`
+/// `L` defaults to `u32` so this crate's tests can write `Pcs`
 /// unannotated; the SNARK instantiates `Pcs<L>`.
 #[derive(Clone)]
 pub struct Pcs<L: Limb = u32> {
     pub params: RaaParams<L>,
     pub k1: usize,
     pub k2: usize,
-    /// Number of column queries per opening (`t` in `pcs-ring.md` §2.5).
+    /// Number of column queries per opening (`t`).
     pub ell: usize,
     /// The 32 constants `v_k := pack_r2(e_k)`, precomputed once. They let the
     /// verifier compute `Σ_i e_0[i] · pack_r2(col[i])` as
@@ -63,14 +62,14 @@ impl<L: HasPackingConstants> Pcs<L> {
         }
     }
 
-    /// Protocol-driven setup (paper §4: Cor. 4.16 / Thm 4.17).
+    /// Protocol-driven setup (paper Theorem 5.8).
     ///
     /// Given the multilinear size `num_vars` (`N = 2^num_vars`), the RAA inverse
     /// rate `q` (`n = q·k2`, rate `ρ = 1/q`), the code's assumed relative
     /// distance `delta`, and a target soundness `lambda` (bits), this:
     ///
     /// 1. derives the query count `t` from the soundness bound — the dominant
-    ///    `ε_test = (1−δ/3)^t` term of Thm 4.17 ([`recommended_query_size`]);
+    ///    `ε_test = (1−δ/3)^t` term of the paper's Theorem 5.8 ([`recommended_query_size`]);
     /// 2. picks the matrix shape `(k1, k2)` with `k1·k2 = N` that **minimizes
     ///    the opening-proof size** at that `t` and rate ([`optimal_shape`]).
     ///
@@ -187,23 +186,24 @@ pub const SECURE_LAMBDA: usize = 100;
 pub const SECURE_Q: usize = 4;
 
 /// Smallest query count `t` for which the tensor-PCS soundness error
-/// `ε ≤ ε_test + ε_img + ε_eval` clears `2^{−lambda}` (Thm 4.17). `t` is
+/// `ε ≤ ε_test + ε_img + ε_eval` clears `2^{−lambda}` (paper Theorem 5.8). `t` is
 /// governed by the dominant `ε_test = (1−δ/3)^t` term; `ε_img = ε_eval =
-/// (1−2δ/3)^t` are far smaller at the chosen `t` (≈ `2^{−285}` for δ=0.5,
-/// λ=128) and only ever nudge it by ±1, which the trailing check absorbs.
+/// (1−2δ/3)^t` are far smaller at the chosen `t` (≈ `2^{−207}` for the paper's
+/// δ=0.19, λ=100) and only ever nudge it by ±1, which the trailing check absorbs.
 ///
 /// The `n/|T|` term of `ε_test` is independent of `t`, so it is *not* part of
 /// this computation — see [`achievable_security`] for the n-dependent floor.
 ///
-/// Reproduces the paper's parameter sets (`pcs-ring.md` §2.5): `(δ=0.5)→487`,
-/// `(δ=0.3)→843` at λ=128. (The doc's `842` floors; we round up so
-/// `(1−δ/3)^t` strictly clears the target.)
+/// For the paper's parameters, `(δ=0.19, λ=100) → 1060`.
 pub fn recommended_query_size(delta: f64, lambda: usize) -> usize {
-    assert!(delta > 0.0 && delta < 1.5, "need 0 < δ < 1.5 so that 1−2δ/3 > 0");
+    assert!(
+        delta > 0.0 && delta < 1.5,
+        "need 0 < δ < 1.5 so that 1−2δ/3 > 0"
+    );
     let lam = lambda as f64;
     let base_test = 1.0 - delta / 3.0; //   dominant ε_test base
     let base_other = 1.0 - 2.0 * delta / 3.0; // ε_img / ε_eval base
-    // Closed form from the dominant term: (1−δ/3)^t ≤ 2^{−λ}.
+                                              // Closed form from the dominant term: (1−δ/3)^t ≤ 2^{−λ}.
     let mut t = (lam / (-base_test.log2())).ceil() as usize;
     // Tighten until the *summed* geometric bound clears 2^{−λ} (≈ never trips).
     let target = (-lam).exp2();
@@ -547,7 +547,7 @@ impl<L: HasPackingConstants> Pcs<L> {
     pub fn open(&self, comm: &Commitment<L>, z: &[Gr128<L>]) -> (Gr128<L>, OpeningProof<L>) {
         let (e0, e1) = self.split_eq(z);
         let n = self.params.n;
-        
+
         // m̄ = Σ_i (e_0)_i · m_i  ∈ R^{k_2}. Parallelize over the disjoint output
         // column `j` (each `mbar[j]` sums over `i` in the same fixed order as the
         // serial loop ⇒ bit-identical, no cross-thread accumulator merge).
@@ -836,7 +836,7 @@ impl<L: HasPackingConstants> Pcs<L> {
         true
     }
 
-    /// Virtual rotated opening (general-circuit §3.1.3 + virtual PCS §4.2.2).
+    /// Virtual rotated opening (general circuit, paper §4.3; virtual PCS, paper §5.3).
     ///
     /// Opens the *rotated* witness `ρ̂^(ℓ)` whose block `q` is
     /// `pack_r2(rot_ℓ(slots_q))`, **reusing the single commitment to `ŵ`** — no
@@ -1021,7 +1021,9 @@ impl<L: HasPackingConstants> Pcs<L> {
         let mut query_paths = Vec::with_capacity(self.ell);
         for &j in &query_indices {
             let j = j as usize;
-            let col: Vec<[L; 32]> = (0..self.k1).map(|i| comm.encoded_packed[i * n + j]).collect();
+            let col: Vec<[L; 32]> = (0..self.k1)
+                .map(|i| comm.encoded_packed[i * n + j])
+                .collect();
             query_columns.push(col);
             query_paths.push(comm.tree.open(j));
         }
@@ -1240,9 +1242,15 @@ mod tests {
                 .wrapping_add(1442695040888963407);
             (s >> 32) as u32
         };
-        let a: Vec<[u32; 32]> = (0..k1 * k2).map(|_| std::array::from_fn(|_| next())).collect();
-        let b: Vec<[u32; 32]> = (0..k1 * k2).map(|_| std::array::from_fn(|_| next())).collect();
-        let c: Vec<[u32; 32]> = (0..k1 * k2).map(|_| std::array::from_fn(|_| next())).collect();
+        let a: Vec<[u32; 32]> = (0..k1 * k2)
+            .map(|_| std::array::from_fn(|_| next()))
+            .collect();
+        let b: Vec<[u32; 32]> = (0..k1 * k2)
+            .map(|_| std::array::from_fn(|_| next()))
+            .collect();
+        let c: Vec<[u32; 32]> = (0..k1 * k2)
+            .map(|_| std::array::from_fn(|_| next()))
+            .collect();
 
         let comm = pcs.commit_stacked(&[&a, &b, &c]);
         let mut zs = 0xC0FFEE99u64;
@@ -1286,13 +1294,10 @@ mod setup_tests {
     }
 
     #[test]
-    fn query_size_matches_paper_param_sets() {
-        // Optimistic δ=0.5 (q=4) → 487; conservative δ=0.3 (q=6) → 843
-        // (pcs-ring.md §2.5; the doc floors the latter to 842).
-        assert_eq!(recommended_query_size(0.5, 128), 487);
-        assert_eq!(recommended_query_size(0.3, 128), 843);
+    fn query_size_matches_paper_params() {
+        assert_eq!(recommended_query_size(0.19, 100), 1060);
         // The returned t actually clears the full geometric bound.
-        for (delta, lambda) in [(0.5, 128usize), (0.3, 128), (0.5, 100), (0.4, 80)] {
+        for (delta, lambda) in [(0.19, 100usize), (0.5, 128), (0.3, 128), (0.4, 80)] {
             let t = recommended_query_size(delta, lambda);
             let b1 = (1.0 - delta / 3.0).powi(t as i32);
             let b2 = 2.0 * (1.0 - 2.0 * delta / 3.0).powi(t as i32);
@@ -1309,7 +1314,11 @@ mod setup_tests {
 
     #[test]
     fn optimal_shape_beats_every_alternative() {
-        for (m, q, t, lb) in [(20usize, 4usize, 487usize, 4usize), (18, 6, 842, 4), (16, 4, 487, 1)] {
+        for (m, q, t, lb) in [
+            (20usize, 4usize, 487usize, 4usize),
+            (18, 6, 842, 4),
+            (16, 4, 487, 1),
+        ] {
             let n_total = 1usize << m;
             let (k1, k2) = optimal_shape(m, q, t, lb);
             assert_eq!(k1 * k2, n_total);

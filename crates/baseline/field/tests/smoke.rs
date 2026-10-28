@@ -1,6 +1,5 @@
 //! Axiom-level smoke tests for the BabyBear field and its degree-4 binomial
-//! extension. Locks in the API surface that downstream crates (and comparison
-//! benches) rely on.
+//! extension. Locks in the API surface that downstream crates rely on.
 
 use field::{AbstractExtensionField, AbstractField, Field, BB, BB4};
 

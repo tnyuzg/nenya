@@ -1,4 +1,4 @@
-//! End-to-end zkSNARK for the **general-circuit** reduction (paper §3.1.3,
+//! End-to-end zkSNARK for the **general-circuit** reduction (paper §4.3,
 //! Halevi–Shoup cyclic-diagonal packing), generic over the base-limb width `L`.
 //!
 //! ## Structure (mirrors the SIMD prover, with two differences)
@@ -17,7 +17,7 @@
 //!
 //! The packed diagonals `D̂_{A,B,C}^(ℓ)` are **public and deterministic** — they
 //! are precomputed once into [`GeneralSnarkParams`] ([`reduction::pack_general_matrices`])
-//! and are **not** part of the per-proof cost (paper §3.1.3). The prover's
+//! and are **not** part of the per-proof cost (paper §4.3). The prover's
 //! reduction is only the witness-dependent part ([`reduction::general_reduce_witness`]):
 //! the 32 block-rotations `ρ̂` and the A,B kernel quotients.
 //!
@@ -40,14 +40,13 @@ use reduction::{general_reduce_witness, pack_r2, psi_r2_with_t1, GeneralDiagonal
 use std::time::Instant;
 
 use piop_ring::{
-    build_eq_table, prove_linear_check_general, prove_mult_check_sub,
-    verify_linear_check_general, verify_mult_check_sub, LinearCheckGeneralProof, Mle,
-    MultCheckSubProof, LAYERS,
+    build_eq_table, prove_linear_check_general, prove_mult_check_sub, verify_linear_check_general,
+    verify_mult_check_sub, LinearCheckGeneralProof, Mle, MultCheckSubProof, LAYERS,
 };
 
+use crate::error::VerifyError;
 use crate::r2_pcs::{columns_in_kernel, R2OpeningProof, R2Pcs};
 use crate::transcript::Transcript;
-use crate::error::VerifyError;
 
 /// Public parameters. Holds the **precomputed** diagonals (setup) plus the two
 /// PCSs (sized for the block count `n_blocks = n/32 = 2^log_blocks`).
@@ -67,17 +66,19 @@ impl<L: HasPackingConstants> GeneralSnarkParams<L> {
     /// `*::setup`. `diag` is the packed cyclic-diagonal preprocessing
     /// (`pack_general_matrices`), witness-independent setup. Real proofs use this;
     /// raw construction with a small explicit `ell` is for tests/benchmarks only.
-    pub fn secure(
-        log_blocks: usize,
-        diag: GeneralDiagonals<L>,
-        seed_w: u64,
-        seed_e: u64,
-    ) -> Self {
+    pub fn secure(log_blocks: usize, diag: GeneralDiagonals<L>, seed_w: u64, seed_e: u64) -> Self {
         Self {
             log_blocks,
             // Witness PCS is opened LAYERS times sharing columns (rotated_open_batch),
             // so optimize the shape for "m̄ ×LAYERS, columns ×1".
-            pcs_w: Pcs::setup_batched(log_blocks, SECURE_Q, SECURE_DELTA, SECURE_LAMBDA, seed_w, LAYERS),
+            pcs_w: Pcs::setup_batched(
+                log_blocks,
+                SECURE_Q,
+                SECURE_DELTA,
+                SECURE_LAMBDA,
+                seed_w,
+                LAYERS,
+            ),
             // (â,b̂,ĉ) PCS: ONE 3-stacked opening, so shape for "columns ×3, m̄ ×1"
             // (small k1) — NOT the rotated witness shape (which would bloat it).
             pcs_abc: Pcs::setup_stacked(
@@ -292,7 +293,10 @@ pub struct LinearDecomp {
     pub eval_ms: f64,
 }
 
-pub fn measure_linear_decomp<L: Limb>(diag: &GeneralDiagonals<L>, log_blocks: usize) -> LinearDecomp {
+pub fn measure_linear_decomp<L: Limb>(
+    diag: &GeneralDiagonals<L>,
+    log_blocks: usize,
+) -> LinearDecomp {
     let nb = 1usize << log_blocks;
     // Mock the verifier challenges — the per-phase cost is value-independent.
     let mut s = 0x5EED_1357_u64;
@@ -408,7 +412,10 @@ pub fn prove_general_with_timing<L: HasPackingConstants>(
         .par_iter()
         .map(|&x| pack_r2(unpack_flat(x, &t1)))
         .collect();
-    let e_c: Vec<Gr128<L>> = (0..nb).into_par_iter().map(|i| c_sum[i] - c_hat[i]).collect();
+    let e_c: Vec<Gr128<L>> = (0..nb)
+        .into_par_iter()
+        .map(|i| c_sum[i] - c_hat[i])
+        .collect();
     // ê_mult' = â∘b̂ − ĉ (the committed image ĉ, NOT the raw Ĉŵ — no ê_C fold).
     let e_mult: Vec<Gr128<L>> = (0..nb)
         .into_par_iter()
@@ -492,10 +499,8 @@ pub fn prove_general_with_timing<L: HasPackingConstants>(
     // Move ρ̂ into the MLEs (no clone): `parts.rho` is not used after the matvec
     // above, so cloning 32×nb Gr128 (16 GB @2^25) was pure waste.
     let rhos: [Mle<L>; LAYERS] = parts.rho.map(Mle::new);
-    let claim_lin = mult_proof.final_a
-        + gamma * mult_proof.final_b
-        + gamma2 * mult_proof.final_c
-        + estack_val;
+    let claim_lin =
+        mult_proof.final_a + gamma * mult_proof.final_b + gamma2 * mult_proof.final_c + estack_val;
     tr.absorb_label(b"linear_check_sumcheck");
     let tr_sc = Instant::now();
     let (lin_proof, s_2) = prove_linear_check_general(rows, rhos, claim_lin, &mut tr);
@@ -505,7 +510,11 @@ pub fn prove_general_with_timing<L: HasPackingConstants>(
     // ----- 7. Opens: 32 virtual rotated ρ̂ (one shared proximity test). -----
     let t = Instant::now();
     let (ys, open_rho) = params.pcs_w.rotated_open_batch(&comm_w, &s_2, LAYERS);
-    debug_assert_eq!(ys.as_slice(), &lin_proof.final_rho[..], "rotated opens ≠ final_rho");
+    debug_assert_eq!(
+        ys.as_slice(),
+        &lin_proof.final_rho[..],
+        "rotated opens ≠ final_rho"
+    );
     timing.opens_ms += t.elapsed().as_secs_f64() * 1e3;
 
     timing.total_ms = total_t.elapsed().as_secs_f64() * 1e3;
@@ -648,7 +657,10 @@ pub fn verify_general_with_timing<L: HasPackingConstants>(
     let t = Instant::now();
     let pcs = (|| -> Result<(), VerifyError> {
         let w = [Gr128::<L>::ONE, gamma, gamma2];
-        if !params.pcs_e.verify(proof.root_emult, &s_1, emult_s1, &proof.open_emult) {
+        if !params
+            .pcs_e
+            .verify(proof.root_emult, &s_1, emult_s1, &proof.open_emult)
+        {
             return Err(VerifyError::PcsE);
         }
         // (â,b̂,ĉ) — slot form ⇒ structurally in Im φ, so NO image check needed.

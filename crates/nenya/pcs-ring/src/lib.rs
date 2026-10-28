@@ -2,7 +2,7 @@
 //! `R = GR(2^32, 128)` with an RAA fast-path linear code, committing
 //! directly to the 32-u32 packed representation of `reduction::pack_r2`.
 //!
-//! See `pcs-ring.md` for the protocol writeup. This crate is a prototype
+//! The protocol is the paper's Protocol 5.1. This crate is a prototype
 //! intended to validate the protocol end-to-end and produce concrete
 //! commit/open/verify/proof-size numbers — it is not a hardened production
 //! implementation.
@@ -14,8 +14,8 @@ pub mod raa;
 pub use merkle::{Hash, MerkleTree};
 pub use pcs::{
     achievable_security, optimal_shape, optimal_shape_for, proof_size_bytes, proof_size_bytes_for,
-    recommended_query_size, Commitment, OpeningProof, Pcs, RotatedOpeningBatch, StackedSlotCommitment,
-    SECURE_DELTA, SECURE_LAMBDA, SECURE_Q,
+    recommended_query_size, Commitment, OpeningProof, Pcs, RotatedOpeningBatch,
+    StackedSlotCommitment, SECURE_DELTA, SECURE_LAMBDA, SECURE_Q,
 };
 pub use raa::RaaParams;
 
@@ -52,7 +52,10 @@ mod e2e_tests {
     /// Reference: evaluate a multilinear whose Boolean-cube evals are
     /// `pack_r2(evals_packed[i])`, using the same MSB-first variable order
     /// as `build_eq_table`.
-    fn eval_mle_packed<L: HasPackingConstants>(evals_packed: &[[L; 32]], z: &[Gr128<L>]) -> Gr128<L> {
+    fn eval_mle_packed<L: HasPackingConstants>(
+        evals_packed: &[[L; 32]],
+        z: &[Gr128<L>],
+    ) -> Gr128<L> {
         let table = build_eq_table(z);
         let t = table.evals();
         assert_eq!(t.len(), evals_packed.len());
@@ -138,4 +141,5 @@ mod e2e_tests {
     width_tests!(w8, u8);
     width_tests!(w16, u16);
     width_tests!(w32, u32);
+    width_tests!(w64, u64);
 }

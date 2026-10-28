@@ -1,4 +1,4 @@
-//! Packing embedding φ_2 and the three R1CS reductions of paper §3.2:
+//! Packing embedding φ_2 and the three R1CS reductions of paper §4:
 //! SIMD (data-parallel), MIMD (circuit-parallel), and general single-circuit.
 //!
 //! - Two-level Lagrange packing `φ_2: R_0^32 → R_2` with low-degree
@@ -28,8 +28,8 @@ pub use instance::{
     PackedSimdR1csInstance, SimdR1csInstance,
 };
 pub use matrix::{
-    matvec_gr1, matvec_gr128, matvec_gr128_csr, matvec_gr128_dense,
-    matvec_gr128_dense_csr, matvec_gr1_csr, CsrMatrix, SparseMatrix,
+    matvec_gr1, matvec_gr128, matvec_gr128_csr, matvec_gr128_dense, matvec_gr128_dense_csr,
+    matvec_gr1_csr, CsrMatrix, SparseMatrix,
 };
 pub use reduce::{
     general_reduce_witness, general_to_packed, mimd_reduce_witness, mimd_to_packed,

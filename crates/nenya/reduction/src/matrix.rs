@@ -105,10 +105,7 @@ pub fn matvec_gr128_csr<L: Limb>(m: &CsrMatrix<Gr1<L>>, w: &[Gr128<L>]) -> Vec<G
 }
 
 /// `m · w`  (R_2 matrix, R_2 vector → R_2 vector), parallel over rows.
-pub fn matvec_gr128_dense_csr<L: Limb>(
-    m: &CsrMatrix<Gr128<L>>,
-    w: &[Gr128<L>],
-) -> Vec<Gr128<L>> {
+pub fn matvec_gr128_dense_csr<L: Limb>(m: &CsrMatrix<Gr128<L>>, w: &[Gr128<L>]) -> Vec<Gr128<L>> {
     assert_eq!(w.len(), m.cols);
     (0..m.rows)
         .into_par_iter()

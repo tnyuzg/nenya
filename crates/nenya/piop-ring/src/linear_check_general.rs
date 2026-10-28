@@ -1,5 +1,5 @@
 //! Degree-2 sumcheck for `∑_h ∑_ℓ Row^{(ℓ)}[h] · ρ^{(ℓ)}[h]` — the linear
-//! check for the general-circuit reduction (paper §3.2.3, Halevi–Shoup
+//! check for the general-circuit reduction (paper §4.3, Halevi–Shoup
 //! packing).
 //!
 //! # Protocol

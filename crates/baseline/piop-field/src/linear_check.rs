@@ -133,7 +133,7 @@ fn compute_round_poly(f: &Mle, g: &Mle, c_prev: BB4) -> [BB4; 3] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use field::{AbstractExtensionField, BB, BB4UniformSampler};
+    use field::{AbstractExtensionField, BB4UniformSampler, BB};
 
     fn rand_bb4(state: &mut u64) -> BB4 {
         let mut next = || {

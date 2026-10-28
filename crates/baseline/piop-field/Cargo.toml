@@ -2,27 +2,10 @@
 name = "piop-field"
 version = "0.1.0"
 edition = "2021"
+license = "MIT OR Apache-2.0"
 
-# Field-side baseline for the two PIOP sumchecks. Mirrors `piop-ring` exactly:
-#   - mult check: ∑_h eq(r, h) · a(h) · b(h)         (deg-3, naive 3-table)
-#   - linear check: ∑_h A(r, h) · w(h)                (deg-2, dense BB4 matvec)
-#
-# Element type: BB4 = BinomialExtensionField<BabyBear, 4>. There is no
-# "u32 lifted into the constant term" structure to exploit, so the linear
-# check matvec uses the generic `*`. The {s(0), s(1), s(∞)} round-message
-# trick still applies and is used here too — the only difference vs. the
-# ring side on that axis is that the "saved mul" is much cheaper (BB4 muls
-# are ~10ns), so the relative speedup is smaller. Both crates use the same
-# inner-loop shape so the apples-to-apples per-witness ratio is honest.
+# The multiplication and linear checks over the degree-4 BabyBear extension.
 
 [dependencies]
 field = { path = "../field" }
-rand = "0.8"
-rayon = "1.10"                                    # intra-round sumcheck reduction + MLE fold
-
-[dev-dependencies]
-criterion = { version = "0.5", features = ["html_reports"] }
-
-[[bench]]
-name = "piop"
-harness = false
+rayon = "1.10"

@@ -23,7 +23,7 @@ use galois_ring::{Gr1, Gr128, Limb};
 // §3.2.1 SIMD
 // ---------------------------------------------------------------------------
 
-/// Paper §3.2.1 reduction: pack a 32-instance SIMD batch (shared `A, B, C`,
+/// Paper §4.1 reduction: pack a 32-instance SIMD batch (shared `A, B, C`,
 /// 32 witnesses) into a single packed instance.
 ///
 /// Produces:
@@ -140,7 +140,7 @@ fn pack_matrix_set<L: HasPackingConstants>(
     (packed, views)
 }
 
-/// Paper §3.2.2 reduction: pack 32 R1CS instances with independent
+/// Paper §4.2 reduction: pack 32 R1CS instances with independent
 /// `(A_i, B_i, C_i)` matrices.
 ///
 /// Produces a packed witness `w_phi`, packed matrices `Â, B̂, Ĉ` (each
@@ -437,7 +437,7 @@ pub fn pack_diagonal_layers<L: HasPackingConstants>(
     (layers, views)
 }
 
-/// Paper §3.2.3 reduction: pack a single R1CS over R_0 (witness length `n`
+/// Paper §4.3 reduction: pack a single R1CS over R_0 (witness length `n`
 /// divisible by 32) using the Halevi–Shoup cyclic-diagonal decomposition.
 ///
 /// Produces:
@@ -501,7 +501,8 @@ pub fn general_to_packed<L: HasPackingConstants>(
     //    across (ℓ, q): each (D̂_M^{(ℓ)}[p, q] · rho[ℓ][q]) contributes
     //    `mul_with_quotients_only` to the row-p pair.
     let zero = Gr128::<L>::ZERO;
-    let accumulate = |layers: &[SparseMatrix<Gr128<L>>; 32], views: &DiagViews<L>|
+    let accumulate = |layers: &[SparseMatrix<Gr128<L>>; 32],
+                      views: &DiagViews<L>|
      -> (Vec<Gr128<L>>, Vec<Gr128<L>>) {
         let mut q1 = vec![zero; n_blocks];
         let mut q2 = vec![zero; n_blocks];
@@ -561,7 +562,7 @@ pub fn general_to_packed<L: HasPackingConstants>(
 
 /// **Precomputed** (witness-independent) packed cyclic-diagonal layers of
 /// `A, B, C`. Deterministic from the public matrices — a one-time *setup* cost,
-/// **not** a per-proof cost (paper §3.1.3: the packed diagonals "are
+/// **not** a per-proof cost (paper §4.3: the packed diagonals "are
 /// deterministic and incur no prover cost").
 pub struct GeneralDiagonals<L: Limb> {
     pub d_hat_a: [SparseMatrix<Gr128<L>>; 32],
@@ -719,8 +720,7 @@ pub fn general_reduce_witness<L: HasPackingConstants>(
                 .par_iter()
                 .enumerate()
                 .map(|(idx, &(p, q, _))| {
-                    let (dq1, dq2) =
-                        mul_with_quotients_only(views[ell][idx], rho_views[ell][q]);
+                    let (dq1, dq2) = mul_with_quotients_only(views[ell][idx], rho_views[ell][q]);
                     (p, dq1, dq2)
                 })
                 .collect();

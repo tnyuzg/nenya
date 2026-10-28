@@ -1,4 +1,4 @@
-//! End-to-end general-circuit SNARK test (paper §3.1.3, Halevi–Shoup).
+//! End-to-end general-circuit SNARK test (paper §4.3, Halevi–Shoup).
 //!
 //! Builds a satisfied single R1CS over R_0 = Z/2^L with `x·x = y` constraints
 //! (square `n×n`, witness length `n`, `32 | n`), runs `prove_general` /
@@ -28,11 +28,9 @@ fn build_general<L: Limb>(n: usize) -> GeneralR1csInstance<L> {
     let mut w = vec![Gr1::<L>::ZERO; n];
     w[0] = Gr1::<L>::ONE;
     for i in 0..k {
-        let x = Gr1(
-            L::from_u64((i as u64) ^ 0x9E37)
-                .wrapping_mul(L::from_u64(2_654_435_761))
-                .wrapping_add(L::ONE),
-        );
+        let x = Gr1(L::from_u64((i as u64) ^ 0x9E37)
+            .wrapping_mul(L::from_u64(2_654_435_761))
+            .wrapping_add(L::ONE));
         w[1 + 2 * i] = x;
         w[2 + 2 * i] = x * x;
     }
@@ -41,7 +39,10 @@ fn build_general<L: Limb>(n: usize) -> GeneralR1csInstance<L> {
 
 /// **INSECURE — unit-test params only** (`ell = 8`, ~4-bit, small for speed).
 /// Real proofs use [`GeneralSnarkParams::secure`] (δ=0.19, λ=100 ⇒ `ell = 1060`).
-fn make_params<L: HasPackingConstants>(g: &GeneralR1csInstance<L>, n: usize) -> GeneralSnarkParams<L> {
+fn make_params<L: HasPackingConstants>(
+    g: &GeneralR1csInstance<L>,
+    n: usize,
+) -> GeneralSnarkParams<L> {
     let nb = n / 32; // block count = packed length
     let log_blocks = nb.trailing_zeros() as usize;
     let half = log_blocks / 2;
@@ -141,3 +142,4 @@ macro_rules! width_tests {
 width_tests!(w8, u8);
 width_tests!(w16, u16);
 width_tests!(w32, u32);
+width_tests!(w64, u64);

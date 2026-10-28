@@ -22,8 +22,8 @@
 //!
 //! ## Two general optimizations
 //!
-//! Both internal sumchecks apply two ring-specific tricks beyond the
-//! [`sumcheck-ring`](../sumcheck_ring/index.html) baseline:
+//! Both internal sumchecks apply two ring-specific tricks beyond a textbook
+//! sumcheck:
 //!
 //! - **`{s(0), s(1), s(∞)}` round message** trades 1 GR32_128 mul for ~2
 //!   adds per fold-pair (linear check) — adds are ~30× cheaper than muls,
@@ -40,8 +40,7 @@
 //! each round `observe`s its round message then `sample`s a `T_2` challenge
 //! bound to it. `snark-ring`'s `Transcript` is the real (Blake3) implementor;
 //! [`galois_ring::R2TeichmullerSampler`] implements it in a lock-step mode
-//! (no-op `observe`, PRNG `sample`) for the crate-internal unit tests and the
-//! `sumcheck-ring` cross-checks only.
+//! (no-op `observe`, PRNG `sample`) for the unit tests only.
 //!
 //! ## What this crate is *not*
 //!

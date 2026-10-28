@@ -1,7 +1,7 @@
 //! End-to-end zkSNARK over `R_2 = GR(2^n, 128)` for **SIMD** R1CS, generic over
 //! the base-limb width `L` (`u8`/`u16`/`u32`/`u64`).
 //!
-//! Pipeline (paper §3, SIMD path):
+//! Pipeline (paper §4.1, SIMD path):
 //!
 //! 1. `SimdR1csInstance<L>` ── [`reduction::simd_to_packed`] ──▶
 //!    `PackedSimdR1csInstance<L>` over R_2 with kernel quotients `q1, q2`.
@@ -28,8 +28,7 @@
 //!
 //! ## Sumcheck kernels (the optimized PIOP path)
 //!
-//! Both sumchecks use the **optimized** `piop-ring` provers, not the
-//! `sumcheck-ring` reference baseline (which is kept only for benchmarking):
+//! Both sumchecks use the optimized `piop-ring` provers:
 //!
 //! - **Mult check** — Gruen's eq-MLE specialization
 //!   ([`piop_ring::prove_mult_check`]). The round message of the
@@ -68,8 +67,7 @@
 use galois_ring::{Gr1, Gr128, Limb};
 use piop_ring::{
     build_eq_table, prove_linear_check_simd_sumcheck_only, prove_mult_check,
-    verify_linear_check_simd, verify_mult_check, LinearCheckSimdProof, Mle,
-    MultCheckProof,
+    verify_linear_check_simd, verify_mult_check, LinearCheckSimdProof, Mle, MultCheckProof,
 };
 use rayon::prelude::*;
 use reduction::constants::HasPackingConstants;
@@ -434,7 +432,7 @@ pub fn verify_simd_with_timing<L: HasPackingConstants>(
     // Free-subspace check: ê ∈ ker(ψ). Without it a prover with a∘b ≠ c could
     // pass by committing the non-kernel error ê = â∘b̂ − ĉ; forcing ê ∈ ker(ψ)
     // makes ψ(ê) = a∘b − c, so a∘b = c is enforced. Pure verifier work on the
-    // already-opened columns (paper §4.2.2). The Im(φ) side (w_phi packed form)
+    // already-opened columns (paper §5.2). The Im(φ) side (w_phi packed form)
     // is enforced by construction at the pcs_w commitment.
     t = std::time::Instant::now();
     if !columns_in_kernel(&proof.open_e) {
@@ -479,14 +477,27 @@ pub fn verify_simd_with_timing<L: HasPackingConstants>(
     timing.linear_sumcheck_ms = t.elapsed().as_secs_f64() * 1e3;
 
     // ----- 7. Cross-check final_a_row against verifier-computed M_γ_row(s_2). -----
-    t = std::time::Instant::now();
+    // eq-table builds belong to the linear/piop bucket, not the matrix-eval
+    // component — keep piop_mxeval = row rebuild + final dot, comparable to the
+    // MIMD/general verifiers (which build eq outside their recompute timer).
+    let teq = std::time::Instant::now();
     let eq_s1 = build_eq_table(&s_1);
     let eq_r = build_eq_table(&r_target);
     let eq_s2 = build_eq_table(&s_2);
+    timing.linear_sumcheck_ms += teq.elapsed().as_secs_f64() * 1e3;
+    t = std::time::Instant::now();
     // Reuse the prover's parallel row build + a parallel inner product with
-    // eq_s2 (was a serial double-sum).
-    let m_gamma_row =
-        build_combined_a_row(a, b, c, eq_s1.evals(), eq_r.evals(), gamma, gamma2, params.m());
+    // eq_s2.
+    let m_gamma_row = build_combined_a_row(
+        a,
+        b,
+        c,
+        eq_s1.evals(),
+        eq_r.evals(),
+        gamma,
+        gamma2,
+        params.m(),
+    );
     let m_gamma_row_at_s2 = inner_product(eq_s2.evals(), &m_gamma_row);
     if m_gamma_row_at_s2 != proof.lin_proof.final_a_row {
         return Err(VerifyError::LinARowMismatch);
@@ -667,7 +678,14 @@ mod kernel_soundness_tests {
         let gamma2 = gamma * gamma;
         let eq_s1 = build_eq_table(&s_1);
         let m_gamma_row = build_combined_a_row(
-            &simd.a, &simd.b, &simd.c, eq_s1.evals(), eq_r.evals(), gamma, gamma2, m,
+            &simd.a,
+            &simd.b,
+            &simd.c,
+            eq_s1.evals(),
+            eq_r.evals(),
+            gamma,
+            gamma2,
+            m,
         );
         let claim_lin = mult_proof.final_a + gamma * mult_proof.final_b + gamma2 * cw_at_r;
         tr.absorb_gr128_slice(b"claim_lin", &[claim_lin]);

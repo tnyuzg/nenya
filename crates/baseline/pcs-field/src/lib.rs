@@ -2,10 +2,7 @@
 //! a `BB4` point). The apples-to-apples baseline for [`pcs_ring::Pcs`]:
 //! identical RAA code, blake3 column-Merkle, and Fiat–Shamir; the only
 //! deliberate difference is the element type.
-//!
-//! Extracted from the former `pcs-ring/benches/field_pcs.rs` into a reusable
-//! library so [`snark_field`](../snark_field/index.html) can build an
-//! end-to-end field SNARK on it.
+//! Used by `snark-field`.
 
 pub mod pcs;
 pub mod raa;

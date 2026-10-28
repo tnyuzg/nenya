@@ -15,9 +15,8 @@ pub use teichmuller::{compute_t1, compute_t1_generic, teichmuller_lift_r2, OMEGA
 // ---------------------------------------------------------------------------
 // Backwards-compatible `u32` instantiation.
 //
-// The historical concrete types `GR32_1 / GR32_4 / GR32_128` are now the
-// `u32` monomorphization of the generic tower. Existing code, tests, and
-// benches keep compiling unchanged; new code can name `Gr1<u8>` etc.
+// `GR32_1 / GR32_4 / GR32_128` are the `u32` instantiation of the generic
+// tower; other widths are named `Gr1<u8>`, `Gr128<u64>`, etc.
 // ---------------------------------------------------------------------------
 
 pub type GR32_1 = Gr1<u32>;

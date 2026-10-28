@@ -167,7 +167,7 @@ impl<L: Limb> R2OpeningProof<L> {
 /// commitment: every Merkle-authenticated codeword entry in the opening must
 /// lie in `ker ψ`.
 ///
-/// Soundness (paper §4.2.2, "submodule checks are free"): the lifted code is
+/// Soundness (paper §5.2, "submodule checks are free"): the lifted code is
 /// `R_0`-linear and `ker ψ` is an `R_0`-submodule, so a codeword column inherits
 /// kernel membership from its message row; the proximity gap then lifts this
 /// `ell`-column spot-check to "the committed error is a kernel-valued codeword",
@@ -763,7 +763,10 @@ mod tests {
         }
 
         let (_, kproof) = pcs.open(&pcs.commit(&kernel), &z);
-        assert!(columns_in_kernel(&kproof), "kernel-valued columns must pass");
+        assert!(
+            columns_in_kernel(&kproof),
+            "kernel-valued columns must pass"
+        );
 
         let (_, iproof) = pcs.open(&pcs.commit(&image), &z);
         assert!(

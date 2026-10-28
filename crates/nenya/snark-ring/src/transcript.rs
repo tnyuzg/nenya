@@ -131,7 +131,10 @@ mod tests {
         Challenger::observe(&mut t2, &poly(0xBB));
         let c1: GR32_128 = Challenger::sample(&mut t1);
         let c2: GR32_128 = Challenger::sample(&mut t2);
-        assert_ne!(c1, c2, "challenge must depend on the observed round message");
+        assert_ne!(
+            c1, c2,
+            "challenge must depend on the observed round message"
+        );
     }
 
     /// Determinism: identical observe sequences yield identical challenges

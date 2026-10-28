@@ -5,15 +5,12 @@
 //! structure (`prove_*` / `verify_*` / `*SnarkParams` / `*SnarkProof`):
 //!
 //! - [`simd`] — SIMD R1CS: 32 copies of one R1CS sharing the matrices
-//!   (paper §3, SIMD path).
-//! - [`mimd`] — MIMD R1CS: 32 *independent* R1CS packed into one (paper §3.2.2).
+//!   (paper §4.1, SIMD path).
+//! - [`mimd`] — MIMD R1CS: 32 *independent* R1CS packed into one (paper §4.2).
 //! - [`general`] — a single large R1CS over `R_2`.
 //!
 //! Shared infrastructure: the `R_2` PCS ([`r2_pcs`]), the Fiat–Shamir
 //! [`transcript`], and the common verifier [`error::VerifyError`].
-//!
-//! The `sumcheck-ring` crate holds the *unoptimized reference* kernels; it is
-//! used only for benchmarking, never on these prover paths.
 
 pub mod error;
 pub mod general;

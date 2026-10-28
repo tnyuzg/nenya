@@ -1,4 +1,4 @@
-//! End-to-end zkSNARK for the **MIMD** reduction (paper §3.2.2): 32 *independent*
+//! End-to-end zkSNARK for the **MIMD** reduction (paper §4.2): 32 *independent*
 //! R1CS instances packed into one over `R_2`. Generic over the base-limb width `L`.
 //!
 //! Structure = SIMD prover + **dense `GR128` matrices** `Â,B̂,Ĉ` (matvec /
@@ -28,13 +28,12 @@ use piop_ring::linear_check_mimd::{
     prove_linear_check_mimd_sumcheck_only, verify_linear_check_mimd, LinearCheckMimdProof,
 };
 use piop_ring::{
-    build_eq_table, prove_mult_check_sub, verify_mult_check_sub, Mle,
-    MultCheckSubProof,
+    build_eq_table, prove_mult_check_sub, verify_mult_check_sub, Mle, MultCheckSubProof,
 };
 
+use crate::error::VerifyError;
 use crate::r2_pcs::{columns_in_kernel, R2OpeningProof, R2Pcs};
 use crate::transcript::Transcript;
-use crate::error::VerifyError;
 
 /// `ψ(x)` flattened to the 32 natural slot order — the left inverse of `pack_r2`
 /// (Teichmüller-eval, matching the kernel check), so `x − pack_r2(unpack_flat(x))`
@@ -94,7 +93,14 @@ impl<L: HasPackingConstants> MimdSnarkParams<L> {
             log_m,
             pcs_w: Pcs::setup(log_m, SECURE_Q, SECURE_DELTA, SECURE_LAMBDA, seed_w),
             // (â,b̂,ĉ) are length-n, image-form: one 3-stacked opening ⇒ setup_stacked.
-            pcs_abc: Pcs::setup_stacked(log_n, SECURE_Q, SECURE_DELTA, SECURE_LAMBDA, seed_w ^ 0xABC, 3),
+            pcs_abc: Pcs::setup_stacked(
+                log_n,
+                SECURE_Q,
+                SECURE_DELTA,
+                SECURE_LAMBDA,
+                seed_w ^ 0xABC,
+                3,
+            ),
             pcs_e: R2Pcs::setup(log_n, SECURE_Q, SECURE_DELTA, SECURE_LAMBDA, seed_e),
             mats,
         }
@@ -271,8 +277,14 @@ pub fn prove_mimd_with_timing<L: HasPackingConstants>(
     let b_hat: Vec<Gr128<L>> = (0..n).into_par_iter().map(|i| b_sum[i] - e_b[i]).collect();
     // C treated like A,B: ĉ = image(Ĉŵ), ê_C = Ĉŵ − ĉ ∈ ker ψ; ê_mult = â∘b̂ − ĉ.
     let t1 = compute_t1_generic::<L>();
-    let c_hat: Vec<Gr128<L>> = c_sum.par_iter().map(|&x| pack_r2(unpack_flat(x, &t1))).collect();
-    let e_c: Vec<Gr128<L>> = (0..n).into_par_iter().map(|i| c_sum[i] - c_hat[i]).collect();
+    let c_hat: Vec<Gr128<L>> = c_sum
+        .par_iter()
+        .map(|&x| pack_r2(unpack_flat(x, &t1)))
+        .collect();
+    let e_c: Vec<Gr128<L>> = (0..n)
+        .into_par_iter()
+        .map(|i| c_sum[i] - c_hat[i])
+        .collect();
     let e_mult: Vec<Gr128<L>> = (0..n)
         .into_par_iter()
         .map(|i| a_hat[i] * b_hat[i] - c_hat[i])
@@ -351,10 +363,8 @@ pub fn prove_mimd_with_timing<L: HasPackingConstants>(
     );
     let m_gamma_row = build_combined_row(mats, eq_s1.evals(), eq_s1.evals(), gamma, gamma2, m);
     timing.linear_rowbuild_ms = tr_rb.elapsed().as_secs_f64() * 1e3;
-    let claim_lin = mult_proof.final_a
-        + gamma * mult_proof.final_b
-        + gamma2 * mult_proof.final_c
-        + estack_val;
+    let claim_lin =
+        mult_proof.final_a + gamma * mult_proof.final_b + gamma2 * mult_proof.final_c + estack_val;
     tr.absorb_label(b"linear_check_sumcheck");
     let g1 = Mle::new(m_gamma_row);
     let g2 = Mle::new(parts.w_phi);
@@ -479,7 +489,14 @@ pub fn verify_mimd_with_timing<L: HasPackingConstants>(
         let eq_s1 = build_eq_table(&s_1);
         let eq_s2 = build_eq_table(&s_2);
         let tr_rr = Instant::now();
-        let m_row = build_combined_row(mats, eq_s1.evals(), eq_s1.evals(), gamma, gamma2, params.m());
+        let m_row = build_combined_row(
+            mats,
+            eq_s1.evals(),
+            eq_s1.evals(),
+            gamma,
+            gamma2,
+            params.m(),
+        );
         if inner_product(eq_s2.evals(), &m_row) != proof.lin_proof.final_m_row {
             return Err(VerifyError::LinARowMismatch);
         }
@@ -504,7 +521,10 @@ pub fn verify_mimd_with_timing<L: HasPackingConstants>(
         {
             return Err(VerifyError::PcsW);
         }
-        if !params.pcs_e.verify(proof.root_emult, &s_1, emult_s1, &proof.open_emult) {
+        if !params
+            .pcs_e
+            .verify(proof.root_emult, &s_1, emult_s1, &proof.open_emult)
+        {
             return Err(VerifyError::PcsE);
         }
         // (â,b̂,ĉ) slot form ⇒ structurally in Im φ; no image check needed.

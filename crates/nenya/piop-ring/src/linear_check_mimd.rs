@@ -1,6 +1,6 @@
 //! Degree-2 sumcheck for `∑_h M_row[h] · w(h)` where
 //! `M_row[h] = ∑_y eq(r_target, y) · M[y, h]` and `M` is sparse and
-//! `R_2 = GR(2^32, 128)`-valued (MIMD reduction, paper §3.2.2).
+//! `R_2 = GR(2^32, 128)`-valued (MIMD reduction, paper §4.2).
 //!
 //! Structurally identical to [`crate::linear_check_simd`]; the only
 //! difference is the matvec step at the front, which uses full ring
@@ -86,7 +86,7 @@ impl<L: Limb> LinearCheckMimdProof<L> {
 /// Compute `M_row[col] = ∑_y eq_row[y] · M[y, col]` via full ring
 /// multiplication. The output is a length-`m.cols` MLE.
 ///
-/// Exposed publicly so callers (verifier, benches, snark-ring) can run
+/// Exposed publicly so callers (the verifier, snark-ring) can run
 /// the same R_2 matvec.
 pub fn build_m_row<L: Limb>(matrix: &SparseMatrix<Gr128<L>>, eq_row: &[Gr128<L>]) -> Mle<L> {
     assert_eq!(

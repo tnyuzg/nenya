@@ -1,4 +1,4 @@
-//! End-to-end MIMD SNARK test (paper §3.2.2): 32 independent R1CS instances,
+//! End-to-end MIMD SNARK test (paper §4.2): 32 independent R1CS instances,
 //! each with `x·x = y` constraints (distinct witnesses, here identical
 //! matrices, but the prover treats them as independent per-instance matrices).
 //! Instantiated per base-limb width below (u8/u16/u32/u64).
@@ -27,7 +27,9 @@ fn build_mimd<L: Limb>(log_size: usize) -> MimdR1csInstance<L> {
     for inst in 0..32 {
         witnesses[inst][0] = Gr1::<L>::ONE;
         for i in 0..k {
-            let x = Gr1(L::from_u64((((inst * 0x9E37) ^ (i * 0x85EB)) as u64).wrapping_add(1)));
+            let x = Gr1(L::from_u64(
+                (((inst * 0x9E37) ^ (i * 0x85EB)) as u64).wrapping_add(1),
+            ));
             witnesses[inst][1 + 2 * i] = x;
             witnesses[inst][2 + 2 * i] = x * x;
         }
@@ -42,7 +44,10 @@ fn build_mimd<L: Limb>(log_size: usize) -> MimdR1csInstance<L> {
 
 /// **INSECURE — unit-test params only** (`ell = 8`, ~4-bit, small for speed).
 /// Real proofs use [`MimdSnarkParams::secure`] (δ=0.19, λ=100 ⇒ `ell = 1060`).
-fn make_params<L: HasPackingConstants>(mimd: &MimdR1csInstance<L>, log_size: usize) -> MimdSnarkParams<L> {
+fn make_params<L: HasPackingConstants>(
+    mimd: &MimdR1csInstance<L>,
+    log_size: usize,
+) -> MimdSnarkParams<L> {
     let half = log_size / 2;
     let k1 = 1 << half;
     let k2 = 1 << (log_size - half);
@@ -145,3 +150,4 @@ macro_rules! width_tests {
 width_tests!(w8, u8);
 width_tests!(w16, u16);
 width_tests!(w32, u32);
+width_tests!(w64, u64);

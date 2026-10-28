@@ -2,12 +2,10 @@
 name = "snark-field"
 version = "0.1.0"
 edition = "2021"
+license = "MIT OR Apache-2.0"
 
-# End-to-end field zkSNARK over BabyBear — the apples-to-apples baseline for
-# `snark-ring`. Standard Spartan-style R1CS-over-BB SNARK: commit the witness
-# `w` once (no φ-packing ⇒ no q1/q2 quotient commitments), run the same two
-# sumchecks (mult + linear) over BB4, open `w` at the linear-check point.
-# Wires together piop-field (the PIOP kernels) and pcs-field (the tensor PCS).
+# End-to-end field SNARK: the same PIOP and PCS design over BabyBear, with no
+# packing, submodule checks or error terms.
 
 [dependencies]
 field = { path = "../field" }
@@ -15,11 +13,4 @@ piop-field = { path = "../piop-field" }
 pcs-field = { path = "../pcs-field" }
 p3-field = "=0.3.2-succinct"
 blake3 = "1.5"
-rayon = "1.10"                                    # parallel build_M_row; bench thread-pool
-
-[dev-dependencies]
-criterion = { version = "0.5", features = ["html_reports"] }
-
-[[bench]]
-name = "snark_field_oneshot"
-harness = false
+rayon = "1.10"

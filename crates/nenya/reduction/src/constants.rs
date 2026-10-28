@@ -1,10 +1,9 @@
 //! Lagrange basis, quotient-decomposition, and vanishing constants for the
 //! packing embedding φ_2 — computed at runtime, generic over the base width.
 //!
-//! Previously this was a generated file of hardcoded `u32` literals. It is now
-//! a generic computation: [`PackingConstants::compute`] builds the α/β Lagrange
+//! [`PackingConstants::compute`] builds the α/β Lagrange
 //! bases, vanishing polynomials, and quotient tables for any [`Limb`] width,
-//! verifying all the algebraic identities of the paper §2.3 on first use
+//! verifying all the algebraic identities of the paper's Appendix B on first use
 //! (`debug_assert!`). Results are cached per type via [`constants`], so each
 //! width pays the (sub-millisecond) build cost at most once.
 //!
@@ -207,7 +206,7 @@ impl<L: Limb> PackingConstants<L> {
         let a = alpha::<L>();
         let l_alpha = [Gr4::<L>::ONE - a, a];
         let v_alpha = a * a - a;
-        // Q_ALPHA = [[+1,-1],[-1,+1]] (derived in the paper §2.3.4).
+        // Q_ALPHA = [[+1,-1],[-1,+1]] (paper Appendix B.2).
         let q_alpha = [
             [Gr4::<L>::ONE, -Gr4::<L>::ONE],
             [-Gr4::<L>::ONE, Gr4::<L>::ONE],

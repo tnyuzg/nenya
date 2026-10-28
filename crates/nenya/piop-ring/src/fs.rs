@@ -11,9 +11,8 @@
 //! The real implementor is `snark-ring`'s `Transcript` (a Blake3 transcript).
 //! [`R2Sampler`] also implements the trait in a degenerate **lock-step** mode
 //! where `observe` is a no-op and challenges come straight from the seeded
-//! PRNG. That mode is used only by the crate-internal sumcheck unit tests and
-//! the `sumcheck-ring` cross-checks, which drive prover and verifier from the
-//! same seed out of band and so need no transcript binding. It is **not** sound
+//! PRNG. That mode is used only by the sumcheck unit tests, which drive prover
+//! and verifier from the same seed out of band and so need no transcript binding. It is **not** sound
 //! for the real SNARK — there, always pass a `Transcript`.
 
 use galois_ring::{Gr128, Limb, R2Sampler};
@@ -31,7 +30,7 @@ pub trait Challenger<L: Limb> {
 
     /// Squeeze one Teichmüller challenge in `T_2 ⊂ R_2`, bound to all prior
     /// `observe`s. Challenges must lie in the unit-separated set `T_2` for the
-    /// Schwartz–Zippel-over-rings soundness bound to hold (paper §2.1).
+    /// Schwartz–Zippel-over-rings soundness bound to hold (paper Lemma 3.8).
     fn sample(&mut self) -> Gr128<L>;
 }
 

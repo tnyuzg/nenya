@@ -246,12 +246,8 @@ pub fn prove_mult_check<L: Limb>(
 /// `eq_gruen` has length `m = a.len() / 2 = b.len() / 2`. Each entry weights
 /// one fold-pair; per-pair compute is 6 muls (see the module docstring for
 /// the full breakdown).
-///
-/// Marked `#[doc(hidden)] pub` so `benches/piop.rs` can call it directly for
-/// fine-grained measurements. Not part of the stable crate API.
-#[doc(hidden)]
 #[inline]
-pub fn compute_round_poly_gruen<L: Limb>(
+fn compute_round_poly_gruen<L: Limb>(
     eq_gruen: &[Gr128<L>],
     a: &Mle<L>,
     b: &Mle<L>,
@@ -302,12 +298,8 @@ pub fn compute_round_poly_gruen<L: Limb>(
 /// Halve `eq_gruen` by marginalizing the leading variable, then multiply
 /// every entry by `scale`. Sum-over-leading-bit: `(lo, hi) ↦ lo + hi`,
 /// then `entry ↦ scale · entry`.
-///
-/// Marked `#[doc(hidden)] pub` so `benches/piop.rs` can time the eq-update
-/// step in isolation. Not part of the stable crate API.
-#[doc(hidden)]
 #[inline]
-pub fn marginalize_and_scale<L: Limb>(eq_gruen: &mut Vec<Gr128<L>>, scale: Gr128<L>) {
+fn marginalize_and_scale<L: Limb>(eq_gruen: &mut Vec<Gr128<L>>, scale: Gr128<L>) {
     let m = eq_gruen.len() / 2;
     debug_assert!(m > 0, "cannot marginalize a length-1 table");
     // `lo[i] ← scale·(lo[i] + hi[i])`: disjoint writes → bit-identical to serial.
@@ -388,7 +380,7 @@ pub fn verify_mult_check<L: Limb>(
 // "Sub" variant: proves  Σ_h eq(r_target,h)·(a(h)·b(h) − c(h) − e(h)) = 0,
 // i.e. the R1CS Hadamard relation a∘b = c + e with c and e as committed MLEs.
 // Used by the general/MIMD provers so that â,b̂,ĉ are all bound at the SAME
-// point s_1 (the paper's Protocol 3.1/A.1 form), enabling one stacked opening.
+// point s_1 (the paper's Protocol 4.2/C.1 form), enabling one stacked opening.
 // c and e are linear → they contribute only to the {0,1} accumulators, not the
 // leading (∞) term; the Gruen slim-form arithmetic is otherwise identical.
 // ---------------------------------------------------------------------------
@@ -668,8 +660,7 @@ mod tests {
         let claim = direct_claim(&a, &b, &r_target);
 
         let mut sampler = R2TeichmullerSampler::new(0xC0FFEE);
-        let (proof, challenges) =
-            prove_mult_check(&a, &b, &r_target, claim, &mut sampler);
+        let (proof, challenges) = prove_mult_check(&a, &b, &r_target, claim, &mut sampler);
 
         assert_eq!(proof.round_polys.len(), n);
         assert_eq!(challenges.len(), n);
@@ -714,8 +705,7 @@ mod tests {
         let (_proof_std, ch_std) = prove_mult_check(&a, &b, &r_target, claim, &mut sampler_std);
 
         let mut sampler_opt = R2TeichmullerSampler::new(0xDEAD);
-        let (_proof_opt, ch_opt) =
-            prove_mult_check(&a, &b, &r_target, claim, &mut sampler_opt);
+        let (_proof_opt, ch_opt) = prove_mult_check(&a, &b, &r_target, claim, &mut sampler_opt);
 
         assert_eq!(ch_std, ch_opt, "challenge sequences must agree");
     }

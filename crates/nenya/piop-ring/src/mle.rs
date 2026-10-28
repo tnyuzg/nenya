@@ -1,10 +1,5 @@
 //! Multilinear extension over `R₂ = GR(2^n, 128)`, generic over the base-limb
 //! width `L`.
-//!
-//! Mirror of [`sumcheck_ring::Mle`] — same indexing convention, same
-//! `fold_in_place` semantics. Re-derived locally rather than re-exported so
-//! the PIOP crate can grow ring-specific helpers (e.g. eq-aware fold) without
-//! changing the upstream sumcheck crate's API.
 
 use galois_ring::{Gr128, Limb};
 use rayon::prelude::*;

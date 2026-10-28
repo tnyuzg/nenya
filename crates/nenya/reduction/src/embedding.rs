@@ -1,6 +1,6 @@
 //! The packing embedding φ_2 and its multiplicative homomorphism.
 //!
-//! Two-level Lagrange embedding from the paper §2.3:
+//! Two-level Lagrange embedding from the paper, Appendix B.1:
 //!
 //!   φ_1: R_0² → R_1     a ↦ Σ_{j∈[2]}  a_j · ℓ_j(α)
 //!   φ_2: R_0³² → R_2    a ↦ Σ_{i∈[16]} (Σ_{j∈[2]} a_{i,j}·ℓ_j(α)) · ℓ_i(β)
@@ -24,7 +24,7 @@ use galois_ring::{compute_t1_generic, Gr1, Gr128, Gr4, Limb};
 // φ_1, φ_2
 // ---------------------------------------------------------------------------
 
-/// φ_1 in the paper §2.3: pack 2 R_0 elements into one R_1 element using
+/// φ_1 in the paper (Appendix B.1): pack 2 R_0 elements into one R_1 element using
 /// the α-Lagrange basis: `a[0]·ℓ_0(α) + a[1]·ℓ_1(α)`.
 #[inline]
 pub fn pack_r1<L: HasPackingConstants>(a: [Gr1<L>; 2]) -> Gr4<L> {
@@ -32,7 +32,7 @@ pub fn pack_r1<L: HasPackingConstants>(a: [Gr1<L>; 2]) -> Gr4<L> {
     Gr4::from_gr1(a[0]) * c.l_alpha[0] + Gr4::from_gr1(a[1]) * c.l_alpha[1]
 }
 
-/// φ_2 in the paper §2.3 acting on a 16×2 matrix view. Each row is
+/// φ_2 in the paper (Appendix B.1) acting on a 16×2 matrix view. Each row is
 /// `pack_r1`-packed into an R_1 element, then those 16 R_1 elements are
 /// combined via the β-Lagrange basis into a single R_2 element.
 pub fn pack_r2_matrix<L: HasPackingConstants>(a: [[Gr1<L>; 2]; 16]) -> Gr128<L> {
@@ -149,7 +149,7 @@ pub fn unpack_r2<L: HasPackingConstants>(x: Gr128<L>) -> [[Gr1<L>; 2]; 16] {
 ///   `pack_r2_matrix(a) · pack_r2_matrix(b)  ==  c_phi  +  q1·v_α  +  q2·v_β`
 ///
 /// where `c_phi = pack_r2_matrix(c)` for the Hadamard product `c = a∘b`. The
-/// closed-form expressions for q1, q2 come from the paper §2.3.4.
+/// closed-form expressions for q1, q2 come from the paper, Appendix B.2.
 pub fn mul_with_quotients<L: HasPackingConstants>(
     a: [[Gr1<L>; 2]; 16],
     b: [[Gr1<L>; 2]; 16],
@@ -215,7 +215,7 @@ pub fn mul_with_quotients_only<L: HasPackingConstants>(
 // ψ : R_2 → R_0^32  (the RMFE unpacking) and the kernel-membership test
 // ---------------------------------------------------------------------------
 //
-// ψ is the *forward* unpacking from the paper §1.2–1.3 (NOT the linear left
+// ψ is the *forward* unpacking from the paper, Definition 3.12 / Theorem B.1 (NOT the linear left
 // inverse `unpack_r2`, whose kernel is an arbitrary complement). It evaluates
 // the bivariate (α, β) representative of `x ∈ R_2` at the 32 Teichmüller points
 // `(α ∈ T_0) × (β ∈ T_1)`, where `T_0 = {0, 1}` and `T_1 = { t : t¹⁶ = t } ⊂ R_1`
@@ -356,6 +356,9 @@ mod psi_tests {
         let mut c_bad = c;
         c_bad[0][0] = c_bad[0][0] + Gr1(1);
         let e_bad = prod - pack_r2_matrix(c_bad);
-        assert!(!in_kernel(&e_bad), "corrupted-output error must leave ker ψ");
+        assert!(
+            !in_kernel(&e_bad),
+            "corrupted-output error must leave ker ψ"
+        );
     }
 }

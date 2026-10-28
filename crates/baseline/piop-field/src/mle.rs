@@ -1,7 +1,6 @@
-//! Multilinear extension over BB4. Mirror of
-//! [`sumcheck_field::Mle`] / [`piop_ring::Mle`].
+//! Multilinear extension over BB4, mirroring `piop_ring::Mle`.
 
-use field::{AbstractField, BB4};
+use field::BB4;
 use rayon::prelude::*;
 
 #[derive(Clone, Debug)]
@@ -52,9 +51,5 @@ impl Mle {
     pub fn final_eval(&self) -> BB4 {
         assert_eq!(self.evals.len(), 1, "MLE not fully folded");
         self.evals[0]
-    }
-
-    pub fn zeros(num_vars: usize) -> Self {
-        Self::new(vec![BB4::zero(); 1 << num_vars])
     }
 }

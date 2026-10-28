@@ -82,14 +82,27 @@ pub fn verify_field_with_timing(
         .map_err(|_| FieldVerifyError::LinSumcheck)?;
     timing.linear_sumcheck_ms = t.elapsed().as_secs_f64() * 1e3;
 
-    // Cross-check final_a_row against verifier-computed M_γ_row(s_2).
-    t = std::time::Instant::now();
+    // Cross-check final_a_row against verifier-computed M_γ_row(s_2). eq-table
+    // builds belong to the linear/piop bucket, not the matrix-eval component, so
+    // piop_mxeval stays comparable across systems.
+    let teq = std::time::Instant::now();
     let eq_s1 = build_eq_table(&s_1);
     let eq_r = build_eq_table(&r_target);
     let eq_s2 = build_eq_table(&s_2);
+    timing.linear_sumcheck_ms += teq.elapsed().as_secs_f64() * 1e3;
+    t = std::time::Instant::now();
     // Reuse the prover's parallel row build, then a parallel inner product with
-    // eq_s2 — identical to M_γ_row(s_2), but parallel (was a serial double-sum).
-    let m_row = build_combined_row(a, b, c, eq_s1.evals(), eq_r.evals(), gamma, gamma2, params.m());
+    // eq_s2, which equals M_γ_row(s_2).
+    let m_row = build_combined_row(
+        a,
+        b,
+        c,
+        eq_s1.evals(),
+        eq_r.evals(),
+        gamma,
+        gamma2,
+        params.m(),
+    );
     let m_gamma_at_s2 = m_row
         .evals()
         .par_iter()
@@ -115,4 +128,3 @@ pub fn verify_field_with_timing(
     timing.total_ms = total_t.elapsed().as_secs_f64() * 1e3;
     Ok(timing)
 }
-

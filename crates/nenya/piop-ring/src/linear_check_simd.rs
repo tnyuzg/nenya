@@ -1,6 +1,6 @@
 //! Degree-2 sumcheck for `∑_h A_row[h] · w(h)` where
 //! `A_row[h] = ∑_y eq(r_target, y) · A[y, h]`. The matrix `A` is sparse
-//! and `R₀ = u32`-valued (SIMD reduction, paper §3.2.1).
+//! and `R₀ = u32`-valued (SIMD reduction, paper §4.1).
 //!
 //! This is the **linear check** for the SIMD path. It has three structural
 //! ingredients:
@@ -13,9 +13,8 @@
 //!    is ~15× faster than the generic schoolbook
 //!    `eq_row[y] * GR32_128::from_gr1(A[y, col])` — see
 //!    [`galois_ring::GR32_128::mul_by_gr1`].
-//! 3. **Deg-2 sumcheck** on `∑_h A_row[h] · w(h)`, identical in structure
-//!    to [`sumcheck_ring::prove`] **but with the {s(0), s(1), s(∞)} round
-//!    message form**, which trades 1 mul/pair for 2 adds/pair (~25% faster
+//! 3. **Deg-2 sumcheck** on `∑_h A_row[h] · w(h)`, a standard sumcheck
+//!    **but with the {s(0), s(1), s(∞)} round message form**, which trades 1 mul/pair for 2 adds/pair (~25% faster
 //!    on this hot loop, since adds are ~30× cheaper than muls on `R₂`).
 //!
 //! ## Per-pair inner-loop arithmetic
@@ -31,8 +30,8 @@
 //! sinf += da   · db                 // 1 mul (leading coefficient = s at ∞)
 //! ```
 //!
-//! Total per pair: **2 muls** + 1 add + 2 subs. (Compare to the 4 muls/pair
-//! of `sumcheck-ring::prover::compute_round_poly`.)
+//! Total per pair: **2 muls** + 1 add + 2 subs, versus 4 muls/pair for the
+//! coefficient-form round message.
 //!
 //! ## Per-round conversion to coefficient form
 //!
@@ -135,7 +134,7 @@ impl<L: Limb> LinearCheckSimdProof<L> {
 /// Compute `A_row[col] = ∑_y eq_row[y] · A[y, col]` via the u32-aware
 /// `mul_by_gr1` helper. The output is a length-`2^{log_num_cols}` MLE.
 ///
-/// Exposed publicly so callers (verifier, benches, snark-ring) can run
+/// Exposed publicly so callers (the verifier, snark-ring) can run
 /// the same R_0-aware matvec.
 pub fn build_a_row(matrix: &SparseMatrix, eq_row: &[GR32_128]) -> Mle {
     assert_eq!(
@@ -235,8 +234,8 @@ pub fn prove_linear_check_simd_sumcheck_only<L: Limb>(
 }
 
 /// Build the deg-2 round message in coefficient form via the
-/// `{s(0), s(1), s(∞)}` basis, saving one mul per fold-pair vs. the
-/// `sumcheck-ring` coefficient-form prover.
+/// `{s(0), s(1), s(∞)}` basis, saving one mul per fold-pair vs. a
+/// coefficient-form prover.
 ///
 /// `c_prev` is the running sumcheck claim entering this round, equal to
 /// `s(0) + s(1)` if the prover has been honest. We use it to recover `a1`

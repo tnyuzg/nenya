@@ -231,3 +231,4 @@ macro_rules! width_tests {
 width_tests!(w8, u8);
 width_tests!(w16, u16);
 width_tests!(w32, u32);
+width_tests!(w64, u64);

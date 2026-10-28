@@ -1,4 +1,4 @@
-//! R1CS instance data structures for the three reductions of paper §3.2:
+//! R1CS instance data structures for the three reductions of paper §4:
 //! SIMD (data-parallel), MIMD (circuit-parallel), and general single-circuit.
 
 use crate::constants::{constants, HasPackingConstants};
@@ -6,7 +6,7 @@ use crate::embedding::{pack_r2, unpack_r2};
 use crate::matrix::{matvec_gr1, matvec_gr128, matvec_gr128_dense, SparseMatrix};
 use galois_ring::{Gr1, Gr128, Limb};
 
-/// SIMD R1CS instance (paper §3.2.1): 32 R1CS instances over R_0 = Z/2^n
+/// SIMD R1CS instance (paper §4.1): 32 R1CS instances over R_0 = Z/2^n
 /// sharing one (A, B, C). `L` defaults to `u32`.
 #[derive(Clone, Debug)]
 pub struct SimdR1csInstance<L: Limb = u32> {
@@ -78,7 +78,7 @@ impl<L: HasPackingConstants> PackedSimdR1csInstance<L> {
     }
 }
 
-/// MIMD R1CS instance (paper §3.2.2): 32 R1CS instances over R_0 with
+/// MIMD R1CS instance (paper §4.2): 32 R1CS instances over R_0 with
 /// independent (A_i, B_i, C_i) matrices.
 #[derive(Clone, Debug)]
 pub struct MimdR1csInstance<L: Limb = u32> {
@@ -169,7 +169,7 @@ impl<L: HasPackingConstants> PackedMimdR1csInstance<L> {
     }
 }
 
-/// General-circuit R1CS instance (paper §3.2.3): a single R1CS over R_0
+/// General-circuit R1CS instance (paper §4.3): a single R1CS over R_0
 /// whose witness length `n` is divisible by 32.
 #[derive(Clone, Debug)]
 pub struct GeneralR1csInstance<L: Limb = u32> {

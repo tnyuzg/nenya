@@ -1,6 +1,6 @@
 //! Repeat–Accumulate–Accumulate code over `R = GR(2^32, 128)`.
 //!
-//! Variant B (diagonal-randomized) per `pcs-ring.md` §1.2, with the
+//! The diagonal-randomized variant (paper §5.1), with the
 //! diagonal entries restricted to `R_0^×` (odd `u32`s lifted via the natural
 //! inclusion `R_0 ↪ R`). The fast path multiplies every u32 coordinate of
 //! a `GR32_128` element by the same `GR32_1` scalar, so the encoder is
@@ -260,7 +260,7 @@ mod tests {
         }
     }
 
-    /// Slot-rotation commute (Thm 4.12): the slot-uniform encoder commutes with
+    /// Slot-rotation commute (paper Lemma 5.10): the slot-uniform encoder commutes with
     /// a cyclic rotation of the 32 slots, `Enc(rot_ℓ·m) = rot_ℓ·Enc(m)`. This is
     /// the linchpin of the virtual rotated PCS opening for the general-circuit
     /// reduction — the verifier derives `ρ̂^(ℓ)`'s columns by slot-rotating `ŵ`'s

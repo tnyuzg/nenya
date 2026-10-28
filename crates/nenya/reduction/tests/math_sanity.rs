@@ -1,5 +1,5 @@
 //! Math sanity — independently re-derive the Lagrange / quotient / vanishing
-//! identities from the paper §2.3 using only `GR32_*` and `T1`. Does NOT
+//! identities from the paper's Appendix B using only `GR32_*` and `T1`. Does NOT
 //! depend on `crates/reduction/src/constants.rs`; the point is to catch
 //! transcription errors in the markdown itself, not in the implementation.
 //!
@@ -247,7 +247,7 @@ fn alpha_quotient_identity() {
     }
 }
 
-/// β-side **explicit** quotient formula from the paper §2.3.3 (eq. 121–153).
+/// β-side **explicit** quotient formula (paper Appendix B.2).
 ///
 /// For i ≠ j, the paper gives a closed form for q_{i,j}(X) as an R_1-linear
 /// combination of ℓ_i(X) and ℓ_j(X). The formula contains inverses
@@ -302,7 +302,7 @@ fn beta_quotient_explicit_formula_inverse_free() {
             let rhs = pmul(&combo, &v);
             assert_eq!(
                 lhs, rhs,
-                "the paper §2.3.3 explicit q_{{i,j}} formula failed at (i={i}, j={j})"
+                "the Appendix B.2 explicit q_{{i,j}} formula failed at (i={i}, j={j})"
             );
         }
     }

@@ -3,7 +3,7 @@
 //! T1 = { x ∈ GR(2^32,4) : x^16 = x }   (16 elements)
 //! T1 = { 0, 1, ω, ω², …, ω^14 }  where ω = Teichmüller lift of α ∈ F_16.
 //!
-//! Ordering matches the paper §2.3.1:
+//! Ordering matches the paper, Appendix B.1:
 //!   t_0 = 0 = T1[0]
 //!   t_1 = 1 = T1[1]
 //!   t_i = ω^{i-1} = T1[i]   for i = 2..=15
@@ -88,7 +88,7 @@ pub fn compute_t1() -> [GR32_4; 16] {
 ///
 /// The Teichmüller set T_2 ⊂ R₂ is { x : x^q = x } for q = |F_{2¹²⁸}| = 2¹²⁸.
 /// It is unit-separated (any two distinct elements differ by a unit) and has
-/// size 2¹²⁸ — exactly the challenge set the paper §3.1.1 prescribes for
+/// size 2¹²⁸ — exactly the challenge set the paper (Definition 3.4) prescribes for
 /// sumcheck over R₂.
 ///
 /// **Iteration.** The map φ(x) = x^q is the q-th power Frobenius lift; its
@@ -205,7 +205,12 @@ mod tests_r2 {
             for _ in 0..128 {
                 frob = frob * frob;
             }
-            assert_eq!(frob, t, "lift not fixed under x ↦ x^{{2¹²⁸}} (BITS={})", L::BITS);
+            assert_eq!(
+                frob,
+                t,
+                "lift not fixed under x ↦ x^{{2¹²⁸}} (BITS={})",
+                L::BITS
+            );
         }
     }
 
